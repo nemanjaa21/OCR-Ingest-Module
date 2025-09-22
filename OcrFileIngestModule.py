@@ -1,42 +1,4 @@
 # -*- coding: utf-8 -*-
-# Sample module in the public domain. Feel free to use this as a template
-# for your modules (and you can remove this header and take complete credit
-# and liability)
-#
-# Contact: Brian Carrier [carrier <at> sleuthkit [dot] org]
-#
-# This is free and unencumbered software released into the public domain.
-#
-# Anyone is free to copy, modify, publish, use, compile, sell, or
-# distribute this software, either in source code form or as a compiled
-# binary, for any purpose, commercial or non-commercial, and by any
-# means.
-#
-# In jurisdictions that recognize copyright laws, the author or authors
-# of this software dedicate any and all copyright interest in the
-# software to the public domain. We make this dedication for the benefit
-# of the public at large and to the detriment of our heirs and
-# successors. We intend this dedication to be an overt act of
-# relinquishment in perpetuity of all present and future rights to this
-# software under copyright law.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-# OTHER DEALINGS IN THE SOFTWARE.
-
-
-# Ingest module for Autopsy with GUI
-#
-# Difference between other modules in this folder is that it has a GUI
-# for user options. This is not needed for very basic modules. If you
-# don't need a configuration UI, start with the other sample module.
-#
-# See http://sleuthkit.org/autopsy/docs/api-docs/latest/index.html for documentation
-
 
 import jarray
 import inspect
@@ -153,7 +115,7 @@ class OcrFileIngestModuleWithUI(FileIngestModule):
             temp_file_path = None
             processed_file_path = None
             try:
-                # Step 1: Save the original image to a temporary file
+                #  Save the original image to a temporary file
                 temp_fd, temp_file_path = tempfile.mkstemp(suffix=os.path.splitext(file.getName())[1])
                 os.close(temp_fd)
                 
@@ -168,7 +130,7 @@ class OcrFileIngestModuleWithUI(FileIngestModule):
                 
                 self.log(Level.INFO, "Temporary original image file saved to: " + temp_file_path)
 
-                # Step 2: Apply image preprocessing with ImageMagick
+                #  Apply image preprocessing with ImageMagick
                 processed_fd, processed_file_path = tempfile.mkstemp(suffix=".png")
                 os.close(processed_fd)
 
@@ -201,7 +163,7 @@ class OcrFileIngestModuleWithUI(FileIngestModule):
                 
                 self.log(Level.INFO, "Image preprocessed with ImageMagick and saved to: " + processed_file_path)
 
-                # Step 3: Run Tesseract on the processed image
+                #  Run Tesseract on the processed image
                 tesseract_cmd = ['tesseract', processed_file_path, 'stdout']
                 
                 language_code = self.local_settings.getSetting("language_code")
@@ -217,7 +179,7 @@ class OcrFileIngestModuleWithUI(FileIngestModule):
                     self.log(Level.WARNING, "Tesseract failed to process file " + file.getName() + ". Error: " + tesseract_stderr)
                     return IngestModule.ProcessResult.OK
 
-                # MODIFIED: Decode the stdout byte stream to a UTF-8 string
+                #  Decode the stdout byte stream to a UTF-8 string
                 ocr_text = tesseract_stdout.decode('utf-8', 'ignore').strip()
                 self.log(Level.INFO, "OCR text extracted from " + file.getName())
                 self.log(Level.INFO, "Text which was extracted ====== " + ocr_text )
@@ -261,7 +223,7 @@ class OcrFileIngestModuleWithUI(FileIngestModule):
             except Exception as e:
                 self.log(Level.SEVERE, "An unexpected error occurred during OCR: " + str(e))
             finally:
-                # Step 4: Clean up both temporary files
+                #  Clean up both temporary files
                 if temp_file_path and os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
                 if processed_file_path and os.path.exists(processed_file_path):
@@ -321,7 +283,7 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
     def resizeEvent(self, event):
         self.local_settings.setSetting("resize_value", event.getSource().getText().strip('%'))
     
-    # ADDED: Event handler for language radio buttons
+    #  Event handler for language radio buttons
     def languageEvent(self, event):
         if self.language_eng.isSelected():
             self.local_settings.setSetting("language_code", "eng")
@@ -369,7 +331,7 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
         self.resizePanel.add(self.resize75)
         self.resizePanel.add(self.resize100)
 
-        # ADDED: Language options
+        # Language options
         self.language_label = JLabel("Language for Tesseract:")
         self.languageGroup = ButtonGroup()
         self.language_eng = JRadioButton("English (eng)", actionPerformed=self.languageEvent)
@@ -403,7 +365,7 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
         
         self.add(JPanel())
         
-        # ADDED: Add language panel to the UI
+        # Add language panel to the UI
         self.add(self.languagePanel)
 
     def customizeComponents(self):
@@ -438,7 +400,7 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
         else:
             self.resize100.setSelected(True)
         
-        # ADDED: Set the selected language radio button
+        #  Set the selected language radio button
         language_code = self.local_settings.getSetting("language_code")
         if not language_code:
             # Default to English
@@ -453,3 +415,4 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
 
     def getSettings(self):
         return self.local_settings
+
