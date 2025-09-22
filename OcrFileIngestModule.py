@@ -204,6 +204,11 @@ class OcrFileIngestModuleWithUI(FileIngestModule):
                 # Step 3: Run Tesseract on the processed image
                 tesseract_cmd = ['tesseract', processed_file_path, 'stdout']
                 
+                language_code = self.local_settings.getSetting("language_code")
+                if language_code:
+                    tesseract_cmd.append('-l')
+                    tesseract_cmd.append(language_code)
+                
                 tesseract_process = subprocess.Popen(tesseract_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 tesseract_stdout, tesseract_stderr = tesseract_process.communicate()
                 tesseract_return_code = tesseract_process.wait()
@@ -212,7 +217,8 @@ class OcrFileIngestModuleWithUI(FileIngestModule):
                     self.log(Level.WARNING, "Tesseract failed to process file " + file.getName() + ". Error: " + tesseract_stderr)
                     return IngestModule.ProcessResult.OK
 
-                ocr_text = tesseract_stdout.strip()
+                # MODIFIED: Decode the stdout byte stream to a UTF-8 string
+                ocr_text = tesseract_stdout.decode('utf-8', 'ignore').strip()
                 self.log(Level.INFO, "OCR text extracted from " + file.getName())
                 self.log(Level.INFO, "Text which was extracted ====== " + ocr_text )
                 self.log(Level.INFO, "==================================")
@@ -223,15 +229,15 @@ class OcrFileIngestModuleWithUI(FileIngestModule):
                         blackboard = Case.getCurrentCase().getSleuthkitCase().getBlackboard()
                         
                         attrs = Arrays.asList( BlackboardAttribute(BlackboardAttribute.Type.TSK_KEYWORD,
-                                                OcrFileIngestModuleWithUIFactory.moduleName, ocr_text))
+                                                                   OcrFileIngestModuleWithUIFactory.moduleName, ocr_text))
                         art = file.newAnalysisResult(BlackboardArtifact.Type.TSK_KEYWORD_HIT, Score.SCORE_LIKELY_NOTABLE, None, "Text Files", None, attrs).getAnalysisResult()
 
                         blackboard.postArtifact(art, OcrFileIngestModuleWithUIFactory.moduleName, self.context.getJobId())
 
                         message = IngestMessage.createMessage(
-                                IngestMessage.MessageType.DATA,
-                                OcrFileIngestModuleWithUIFactory.moduleName,
-                                "OCR text found and saved for " + file.getName() )
+                                 IngestMessage.MessageType.DATA,
+                                 OcrFileIngestModuleWithUIFactory.moduleName,
+                                 "OCR text found and saved for " + file.getName() )
                         
                         self.ingestServices.postMessage(message)
                     except Blackboard.BlackboardException as e:
@@ -315,6 +321,15 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
     def resizeEvent(self, event):
         self.local_settings.setSetting("resize_value", event.getSource().getText().strip('%'))
     
+    # ADDED: Event handler for language radio buttons
+    def languageEvent(self, event):
+        if self.language_eng.isSelected():
+            self.local_settings.setSetting("language_code", "eng")
+        elif self.language_srp.isSelected():
+            self.local_settings.setSetting("language_code", "srp")
+        elif self.language_deu.isSelected():
+            self.local_settings.setSetting("language_code", "deu")
+
     def initComponents(self):
         self.setLayout(BoxLayout(self, BoxLayout.Y_AXIS))
         
@@ -354,6 +369,24 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
         self.resizePanel.add(self.resize75)
         self.resizePanel.add(self.resize100)
 
+        # ADDED: Language options
+        self.language_label = JLabel("Language for Tesseract:")
+        self.languageGroup = ButtonGroup()
+        self.language_eng = JRadioButton("English (eng)", actionPerformed=self.languageEvent)
+        self.language_srp = JRadioButton("Serbian (srp)", actionPerformed=self.languageEvent)
+        self.language_deu = JRadioButton("German (deu)", actionPerformed=self.languageEvent)
+
+        self.languageGroup.add(self.language_eng)
+        self.languageGroup.add(self.language_srp)
+        self.languageGroup.add(self.language_deu)
+        
+        self.languagePanel = JPanel()
+        self.languagePanel.setLayout(BoxLayout(self.languagePanel, BoxLayout.X_AXIS))
+        self.languagePanel.add(self.language_label)
+        self.languagePanel.add(self.language_eng)
+        self.languagePanel.add(self.language_srp)
+        self.languagePanel.add(self.language_deu)
+
         self.add(self.image_types_label)
         self.add(self.checkboxJpg)
         self.add(self.checkboxPng)
@@ -368,6 +401,11 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
         self.add(self.checkboxSkipResize)
         self.add(self.resizePanel)
         
+        self.add(JPanel())
+        
+        # ADDED: Add language panel to the UI
+        self.add(self.languagePanel)
+
     def customizeComponents(self):
         self.checkboxJpg.setSelected(self.local_settings.getSetting("jpg_flag") == "true")
         self.checkboxPng.setSelected(self.local_settings.getSetting("png_flag") == "true")
@@ -400,5 +438,18 @@ class OcrFileIngestModuleWithUISettingsPanel(IngestModuleIngestJobSettingsPanel)
         else:
             self.resize100.setSelected(True)
         
+        # ADDED: Set the selected language radio button
+        language_code = self.local_settings.getSetting("language_code")
+        if not language_code:
+            # Default to English
+            self.language_eng.setSelected(True)
+            self.local_settings.setSetting("language_code", "eng")
+        elif language_code == "eng":
+            self.language_eng.setSelected(True)
+        elif language_code == "srp":
+            self.language_srp.setSelected(True)
+        elif language_code == "deu":
+            self.language_deu.setSelected(True)
+
     def getSettings(self):
         return self.local_settings
